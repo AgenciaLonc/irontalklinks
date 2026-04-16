@@ -82,6 +82,17 @@
     .toast.show { transform:translateX(-50%) translateY(0); opacity:1; }
     .toast.success { border-color:var(--success); color:var(--success); }
     .toast.error { border-color:var(--danger); color:var(--danger); }
+    .logo-editor { display:flex; align-items:flex-start; gap:20px; }
+    .logo-preview-wrap { flex-shrink:0; display:flex; flex-direction:column; align-items:center; gap:6px; }
+    .logo-preview { height:54px; max-width:200px; object-fit:contain; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:8px 16px; }
+    .logo-preview-label { font-size:.68rem; color:var(--muted); }
+    .logo-inputs { flex:1; display:flex; flex-direction:column; gap:10px; }
+    .logo-upload-btn { display:flex; align-items:center; justify-content:center; gap:8px; background:transparent; border:1.5px dashed var(--border); border-radius:8px; padding:11px; color:var(--muted); font-size:.85rem; font-family:inherit; cursor:pointer; transition:border-color .2s,color .2s; width:100%; }
+    .logo-upload-btn:hover { border-color:var(--red); color:var(--red); }
+    input[type=file] { display:none; }
+    .or-divider { display:flex; align-items:center; gap:8px; color:var(--muted); font-size:.72rem; letter-spacing:1px; }
+    .or-divider::before,.or-divider::after { content:''; flex:1; height:1px; background:var(--border); }
+    @media(max-width:520px){ .logo-editor{flex-direction:column;} .logo-preview-wrap{width:100%;} }
   </style>
 </head>
 <body>
@@ -111,6 +122,21 @@
     <div class="section">
       <div class="section-head"><span class="section-title">Perfil &amp; Aparencia</span></div>
       <div class="section-body">
+        <div class="field">
+          <label>Logo</label>
+          <div class="logo-editor">
+            <div class="logo-preview-wrap">
+              <img class="logo-preview" id="logo-prev" src="" alt="Logo" />
+              <span class="logo-preview-label">Pré-visualização</span>
+            </div>
+            <div class="logo-inputs">
+              <button class="logo-upload-btn" onclick="document.getElementById('logo-file-input').click()">📁 Carregar imagem do computador</button>
+              <input type="file" id="logo-file-input" accept="image/*" onchange="handleLogoUpload(this)" />
+              <div class="or-divider">ou</div>
+              <input type="url" id="f-logo-url" placeholder="Cole a URL de uma imagem (https://...)" oninput="previewLogoUrl()" />
+            </div>
+          </div>
+        </div>
         <div class="row2">
           <div class="field"><label>Tagline (ex: Canal Oficial)</label><input type="text" id="f-tagline" placeholder="Canal Oficial" /></div>
           <div class="field"><label>Cor de destaque</label><div class="color-row"><input type="color" id="f-accent" value="#ff0000" oninput="updateAccent(this.value)" /><div class="color-presets" id="color-presets"></div></div></div>
@@ -148,9 +174,29 @@
   function logout(){sessionStorage.removeItem("lt_auth");location.reload();}
   function changePwd(){const np=document.getElementById("f-new-pwd").value,cp=document.getElementById("f-confirm-pwd").value;if(!np)return toast("Digite uma nova senha","error");if(np.length<4)return toast("Senha muito curta","error");if(np!==cp)return toast("Senhas nao coincidem","error");localStorage.setItem("linktree_pwd",np);document.getElementById("f-new-pwd").value="";document.getElementById("f-confirm-pwd").value="";toast("Senha alterada! \u2713","success");}
   function ld(){try{const r=localStorage.getItem("linktree_data");return r?JSON.parse(r):JSON.parse(JSON.stringify(DD));}catch{return JSON.parse(JSON.stringify(DD));}}
-  function saveAll(){data.tagline=document.getElementById("f-tagline").value.trim()||"Canal Oficial";data.bio=document.getElementById("f-bio").value.trim();data.accent=document.getElementById("f-accent").value;data.links=[];document.querySelectorAll(".link-item[data-id]").forEach(el=>{data.links.push({id:parseInt(el.dataset.id),icon:el.querySelector(".link-emoji-input").value||"\ud83d\udd17",title:el.querySelector(".link-title-input").value||"Link",desc:el.querySelector(".link-desc-input").value,url:el.querySelector(".link-url-input").value,active:el.querySelector(".link-toggle").checked});});localStorage.setItem("linktree_data",JSON.stringify(data));toast("Salvo com sucesso! \u2713","success");}
+  function saveAll(){data.tagline=document.getElementById("f-tagline").value.trim()||"Canal Oficial";data.bio=document.getElementById("f-bio").value.trim();data.accent=document.getElementById("f-accent").value;
+    // Save logo
+    const urlVal=document.getElementById("f-logo-url").value.trim();
+    if(urlVal){ localStorage.setItem("linktree_logo",urlVal); data.logo=urlVal; }
+    else { const stored=localStorage.getItem("linktree_logo"); if(stored) data.logo=stored; }
+    data.links=[];document.querySelectorAll(".link-item[data-id]").forEach(el=>{data.links.push({id:parseInt(el.dataset.id),icon:el.querySelector(".link-emoji-input").value||"\ud83d\udd17",title:el.querySelector(".link-title-input").value||"Link",desc:el.querySelector(".link-desc-input").value,url:el.querySelector(".link-url-input").value,active:el.querySelector(".link-toggle").checked});});localStorage.setItem("linktree_data",JSON.stringify(data));toast("Salvo com sucesso! \u2713","success");}
   function showApp(){document.getElementById("login-screen").style.display="none";document.getElementById("admin-app").style.display="block";initApp();}
-  function initApp(){const ps=document.getElementById("color-presets");PRESETS.forEach(c=>{const d=document.createElement("div");d.className="color-dot"+(c===(data.accent||"#ff0000")?" active":"");d.style.background=c;d.onclick=()=>{document.getElementById("f-accent").value=c;updateAccent(c);ps.querySelectorAll(".color-dot").forEach(x=>x.classList.remove("active"));d.classList.add("active");};ps.appendChild(d);});document.getElementById("f-tagline").value=data.tagline||"";document.getElementById("f-bio").value=data.bio||"";document.getElementById("f-accent").value=data.accent||"#ff0000";updateAccent(data.accent||"#ff0000");renderLinks();}
+  function initApp(){const ps=document.getElementById("color-presets");PRESETS.forEach(c=>{const d=document.createElement("div");d.className="color-dot"+(c===(data.accent||"#ff0000")?" active":"");d.style.background=c;d.onclick=()=>{document.getElementById("f-accent").value=c;updateAccent(c);ps.querySelectorAll(".color-dot").forEach(x=>x.classList.remove("active"));d.classList.add("active");};ps.appendChild(d);});document.getElementById("f-tagline").value=data.tagline||"";document.getElementById("f-bio").value=data.bio||"";document.getElementById("f-accent").value=data.accent||"#ff0000";updateAccent(data.accent||"#ff0000");
+    // Load logo preview
+    const savedLogo = localStorage.getItem("linktree_logo") || data.logo || "";
+    document.getElementById("f-logo-url").value = savedLogo.startsWith("data:") ? "" : savedLogo;
+    updateLogoPreview(savedLogo || getDefaultLogo());
+    renderLinks();}
+  function getDefaultLogo(){ return document.querySelector(".topbar-logo").src; }
+  function updateLogoPreview(src){ const p=document.getElementById("logo-prev"); if(src){p.src=src; p.onerror=()=>{ p.src=getDefaultLogo(); }; }else{ p.src=getDefaultLogo(); } }
+  function previewLogoUrl(){ const url=document.getElementById("f-logo-url").value.trim(); updateLogoPreview(url||getDefaultLogo()); }
+  function handleLogoUpload(input){
+    const file=input.files[0]; if(!file) return;
+    if(file.size > 2*1024*1024){ toast("Imagem muito grande (máx. 2MB)","error"); return; }
+    const reader=new FileReader();
+    reader.onload=e=>{ const b64=e.target.result; updateLogoPreview(b64); document.getElementById("f-logo-url").value=""; localStorage.setItem("linktree_logo",b64); toast("Logo carregada! Clique em Salvar.","success"); };
+    reader.readAsDataURL(file);
+  }
   function updateAccent(v){document.documentElement.style.setProperty("--red",v);}
   function renderLinks(){const list=document.getElementById("links-list");list.innerHTML="";(data.links||[]).forEach(l=>addLinkEl(l));}
   let nid=Date.now();
