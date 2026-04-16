@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -48,15 +49,23 @@
     .color-dot { width:26px; height:26px; border-radius:50%; cursor:pointer; border:2px solid transparent; transition:transform .15s,border-color .15s; }
     .color-dot:hover { transform:scale(1.15); }
     .color-dot.active { border-color:var(--text); }
-    .links-list { display:flex; flex-direction:column; gap:10px; }
-    .link-item { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:13px 15px; display:flex; align-items:center; gap:11px; transition:border-color .2s; cursor:grab; }
+    .links-list { display:flex; flex-direction:column; gap:14px; }
+    .link-item { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:14px 16px; transition:border-color .2s; }
     .link-item.dragging { opacity:.4; }
     .link-item.drag-over { border-color:var(--red); }
+    .link-item-header { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
     .drag-handle { color:var(--muted); font-size:1.1rem; cursor:grab; user-select:none; }
-    .link-emoji-input { width:44px; background:var(--card); border:1px solid var(--border); border-radius:7px; padding:8px; color:var(--text); font-size:1.1rem; text-align:center; font-family:inherit; outline:none; flex-shrink:0; }
-    .link-fields { display:flex; flex-direction:column; gap:6px; flex:1; }
-    .link-fields input { padding:8px 11px; font-size:.84rem; border-radius:7px; margin:0; }
-    .link-item-actions { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+    .link-emoji-wrap { display:flex; flex-direction:column; gap:3px; }
+    .link-emoji-label { font-size:.68rem; color:var(--muted); font-weight:500; }
+    .link-emoji-input { width:52px; background:var(--card); border:1px solid var(--border); border-radius:7px; padding:8px; color:var(--text); font-size:1.2rem; text-align:center; font-family:inherit; outline:none; }
+    .link-header-spacer { flex:1; }
+    .link-item-actions { display:flex; align-items:center; gap:8px; }
+    .link-fields { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .link-fields .field-url { grid-column:1/-1; }
+    .link-field-wrap { display:flex; flex-direction:column; gap:4px; }
+    .link-field-label { font-size:.72rem; color:var(--muted); font-weight:500; letter-spacing:.3px; }
+    .link-fields input { padding:9px 12px; font-size:.88rem; border-radius:7px; margin:0; width:100%; }
+    @media(max-width:520px){ .link-fields { grid-template-columns:1fr; } .link-fields .field-url { grid-column:1; } }
     .toggle { position:relative; width:38px; height:22px; flex-shrink:0; }
     .toggle input { opacity:0; width:0; height:0; }
     .toggle-slider { position:absolute; inset:0; background:var(--border); border-radius:22px; cursor:pointer; transition:background .2s; }
@@ -146,7 +155,33 @@
   function renderLinks(){const list=document.getElementById("links-list");list.innerHTML="";(data.links||[]).forEach(l=>addLinkEl(l));}
   let nid=Date.now();
   function addLink(){const l={id:++nid,icon:"\ud83d\udd17",title:"",desc:"",url:"",active:true};data.links.push(l);addLinkEl(l);}
-  function addLinkEl(link){const list=document.getElementById("links-list");const el=document.createElement("div");el.className="link-item";el.dataset.id=link.id;el.draggable=true;el.innerHTML=`<span class="drag-handle">&#10271;</span><input class="link-emoji-input" type="text" value="${esc(link.icon||'\ud83d\udd17')}" maxlength="4" /><div class="link-fields"><input class="link-title-input" type="text" placeholder="Titulo" value="${esc(link.title||'')}"/><input class="link-desc-input" type="text" placeholder="Descricao" value="${esc(link.desc||'')}"/><input class="link-url-input" type="url" placeholder="https://..." value="${esc(link.url||'')}"/></div><div class="link-item-actions"><label class="toggle"><input class="link-toggle" type="checkbox" ${link.active!==false?"checked":""}/><span class="toggle-slider"></span></label><button class="btn-icon" onclick="removeLink(this)">&#x2715;</button></div>`;el.addEventListener("dragstart",e=>{dragSrc=el;setTimeout(()=>el.classList.add("dragging"),0);e.dataTransfer.effectAllowed="move";});el.addEventListener("dragend",()=>{el.classList.remove("dragging");document.querySelectorAll(".link-item").forEach(x=>x.classList.remove("drag-over"));});el.addEventListener("dragover",e=>{e.preventDefault();if(el!==dragSrc){document.querySelectorAll(".link-item").forEach(x=>x.classList.remove("drag-over"));el.classList.add("drag-over");}});el.addEventListener("drop",e=>{e.preventDefault();if(dragSrc&&dragSrc!==el){const all=[...el.parentNode.querySelectorAll(".link-item")];const si=all.indexOf(dragSrc),ti=all.indexOf(el);if(si<ti)el.parentNode.insertBefore(dragSrc,el.nextSibling);else el.parentNode.insertBefore(dragSrc,el);}el.classList.remove("drag-over");});list.appendChild(el);}
+  function addLinkEl(link){const list=document.getElementById("links-list");const el=document.createElement("div");el.className="link-item";el.dataset.id=link.id;el.draggable=true;el.innerHTML=`
+    <div class="link-item-header">
+      <span class="drag-handle" title="Arrastar para reordenar">&#10271;</span>
+      <div class="link-emoji-wrap">
+        <span class="link-emoji-label">Ícone</span>
+        <input class="link-emoji-input" type="text" value="${esc(link.icon||'\ud83d\udd17')}" maxlength="4" title="Cole um emoji aqui" />
+      </div>
+      <div class="link-header-spacer"></div>
+      <div class="link-item-actions">
+        <label class="toggle" title="Ativar/desativar link"><input class="link-toggle" type="checkbox" ${link.active!==false?"checked":""}/><span class="toggle-slider"></span></label>
+        <button class="btn-icon" title="Remover link" onclick="removeLink(this)">&#x2715;</button>
+      </div>
+    </div>
+    <div class="link-fields">
+      <div class="link-field-wrap">
+        <span class="link-field-label">Nome do link</span>
+        <input class="link-title-input" type="text" placeholder="Ex: YouTube, Instagram..." value="${esc(link.title||'')}"/>
+      </div>
+      <div class="link-field-wrap">
+        <span class="link-field-label">Descrição (opcional)</span>
+        <input class="link-desc-input" type="text" placeholder="Ex: Assista nossos vídeos" value="${esc(link.desc||'')}"/>
+      </div>
+      <div class="link-field-wrap field-url">
+        <span class="link-field-label">URL do link</span>
+        <input class="link-url-input" type="url" placeholder="https://..." value="${esc(link.url||'')}"/>
+      </div>
+    </div>`;el.addEventListener("dragstart",e=>{dragSrc=el;setTimeout(()=>el.classList.add("dragging"),0);e.dataTransfer.effectAllowed="move";});el.addEventListener("dragend",()=>{el.classList.remove("dragging");document.querySelectorAll(".link-item").forEach(x=>x.classList.remove("drag-over"));});el.addEventListener("dragover",e=>{e.preventDefault();if(el!==dragSrc){document.querySelectorAll(".link-item").forEach(x=>x.classList.remove("drag-over"));el.classList.add("drag-over");}});el.addEventListener("drop",e=>{e.preventDefault();if(dragSrc&&dragSrc!==el){const all=[...el.parentNode.querySelectorAll(".link-item")];const si=all.indexOf(dragSrc),ti=all.indexOf(el);if(si<ti)el.parentNode.insertBefore(dragSrc,el.nextSibling);else el.parentNode.insertBefore(dragSrc,el);}el.classList.remove("drag-over");});list.appendChild(el);}
   function removeLink(btn){const item=btn.closest(".link-item");if(confirm("Remover este link?"))item.remove();}
   function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
   let tt;function toast(msg,type=""){const el=document.getElementById("toast");el.textContent=msg;el.className=`toast show ${type}`;clearTimeout(tt);tt=setTimeout(()=>el.classList.remove("show"),2800);}
